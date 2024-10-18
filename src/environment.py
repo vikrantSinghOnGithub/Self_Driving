@@ -35,6 +35,11 @@ class CarEnv(gym.Env):
         self.car_position = [700, 650]  # Example starting position, adjust as needed
         self.car_velocity = [0, 0]  # Initial velocity
 
+        # Button properties
+        self.button_color = (0, 255, 0)
+        self.button_rect = pygame.Rect(10, 10, 100, 50)
+        self.paused = False
+
     def step(self, action):
         # Implement the logic to take an action and return the next state, reward, done, and info
         if action == 0:  # Move left
@@ -43,6 +48,10 @@ class CarEnv(gym.Env):
             self.car_velocity[0] += 1
         elif action == 2:  # Move forward
             self.car_velocity[1] -= 1
+        
+        # Ensure the car only moves forward
+        if self.car_velocity[1] > 0:
+            self.car_velocity[1] = 0
         
         # Update car position based on velocity
         new_position = [self.car_position[0] + self.car_velocity[0], self.car_position[1] + self.car_velocity[1]]
@@ -57,7 +66,11 @@ class CarEnv(gym.Env):
             else:
                 self.car_position = new_position
                 done = False
-                reward = -1  # Placeholder reward for each step
+                # Reward only for forward movement
+                if self.car_velocity[1] < 0:
+                    reward = 1  # Reward for moving forward
+                else:
+                    reward = -1  # Penalty for moving backward or staying still
         else:
             done = True
             reward = -100  # Penalty for going out of bounds
@@ -81,9 +94,20 @@ class CarEnv(gym.Env):
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.button_rect.collidepoint(event.pos):
+                        self.paused = not self.paused  # Toggle pause state
+
             self.screen.fill((0, 0, 0))  # Clear the screen with black
             self.screen.blit(self.trace_image, (0, 0))  # Draw the trace image
             self.screen.blit(self.car_image, self.car_position)  # Draw the car image
+
+            # Draw the button
+            pygame.draw.rect(self.screen, self.button_color, self.button_rect)
+            font = pygame.font.Font(None, 36)
+            text = font.render('Pause' if not self.paused else 'Resume', True, (0, 0, 0))
+            self.screen.blit(text, (self.button_rect.x + 10, self.button_rect.y + 10))
+
             pygame.display.flip()
             self.clock.tick(30)  # Limit the frame rate to 30 FPS
 
